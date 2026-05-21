@@ -1,12 +1,9 @@
-package com.moneylog.apiconnector.global.exception;
+package com.project.backend.global.exception;
 
 /*
-exception 예외처리
-BusinessException으로 errocode 메세지를 던짐
-GlobalExceptionHandler 의 ExceptionHandler 로 캐치
-ErrCode의 상태코드 반환
+ * 서비스 계층에서 의도적으로 던지는 비즈니스 예외입니다.
+ * ErrorCode를 함께 보관해 GlobalExceptionHandler가 상태 코드와 메시지를 결정할 수 있게 합니다.
  */
-
 public class BusinessException extends RuntimeException {
 
     private final ErrorCode errorCode;
