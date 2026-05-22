@@ -1,6 +1,7 @@
 package com.project.backend.raw.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.project.backend.raw.document.RawExternalDocument;
@@ -38,6 +39,7 @@ public class RawExternalService {
             JsonNode rawPayload
     ) {
         String rawHash = createRawHash(rawPayload);
+        Map<String, Object> rawPayloadMap = convertToMap(rawPayload);
         return rawExternalRepository.findBySourceCodeAndRawHash(sourceCode, rawHash)
                 .orElseGet(() -> rawExternalRepository.save(new RawExternalDocument(
                         sourceCode,
@@ -45,7 +47,7 @@ public class RawExternalService {
                         endpoint,
                         requestParams,
                         externalId,
-                        rawPayload,
+                        rawPayloadMap,
                         rawHash,
                         "SUCCESS"
                 )));
@@ -54,6 +56,16 @@ public class RawExternalService {
     // ExternalApiMetaDocument 1개에 연결된 RawExternalDocument 여러 건을 조회합니다.
     public List<RawExternalDocument> findBySourceCode(String sourceCode) {
         return rawExternalRepository.findAllBySourceCode(sourceCode);
+    }
+
+    private Map<String, Object> convertToMap(JsonNode rawPayload) {
+        try {
+            String json = objectMapper.writeValueAsString(rawPayload);
+            return objectMapper.readValue(json, new TypeReference<>() {
+            });
+        } catch (JsonProcessingException exception) {
+            throw new IllegalStateException("Raw payload cannot be converted to Map.", exception);
+        }
     }
 
     // API마다 JSON 구조가 달라도 JsonNode 전체를 문자열화한 뒤 SHA-256 해시를 생성합니다.

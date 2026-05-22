@@ -38,7 +38,7 @@ class RawExternalServiceTest {
     }
 
     @Test
-    @DisplayName("같은 sourceCode와 rawHash가 없으면 원본 데이터를 저장한다")
+    @DisplayName("같은 sourceCode와 rawHash가 없으면 원본 데이터를 Map 형태로 저장한다")
     void saveIfAbsentSavesNewRawExternal() throws Exception {
         JsonNode rawPayload = objectMapper.readTree("""
                 {
@@ -53,8 +53,8 @@ class RawExternalServiceTest {
         RawExternalDocument result = rawExternalService.saveIfAbsent(
                 "YOUTH_CENTER",
                 "POLICY",
-                "/opi/youthPlcyList.do",
-                Map.of("pageIndex", 1, "display", 100),
+                "/go/ythip/getPlcy",
+                Map.of("pageNum", 1, "pageSize", 100),
                 "P001",
                 rawPayload
         );
@@ -64,6 +64,7 @@ class RawExternalServiceTest {
         assertThat(result.getSourceCode()).isEqualTo("YOUTH_CENTER");
         assertThat(result.getRawHash()).isNotBlank();
         assertThat(captor.getValue().getStatus()).isEqualTo("SUCCESS");
+        assertThat(captor.getValue().getRawPayload()).containsEntry("policyName", "청년 월세 지원");
     }
 
     @Test
@@ -81,7 +82,7 @@ class RawExternalServiceTest {
                 "/api/safeInsrncInfoApi",
                 Map.of("pageNo", 1),
                 "SAFE-001",
-                rawPayload,
+                Map.of("productName", "시민안전보험", "regionName", "서울"),
                 "already-exists",
                 "SUCCESS"
         );
@@ -102,15 +103,14 @@ class RawExternalServiceTest {
 
     @Test
     @DisplayName("sourceCode에 연결된 원본 데이터 목록을 조회한다")
-    void findBySourceCode() throws Exception {
-        JsonNode rawPayload = objectMapper.readTree("{\"cardName\":\"sample\"}");
+    void findBySourceCode() {
         RawExternalDocument rawExternal = new RawExternalDocument(
                 "CARD_GORILLA",
                 "CARD",
                 "https://www.card-gorilla.com/search/card?cate=CRD",
                 Map.of(),
                 null,
-                rawPayload,
+                Map.of("cardName", "sample"),
                 "hash",
                 "SUCCESS"
         );
