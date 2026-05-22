@@ -1,9 +1,8 @@
-package com.moneylog.apiconnector.global.response;
+package com.project.backend.global.response;
 
-
-/* API 요청의 응답 확인을 위한
-record dto response
-*/
+/*
+ * 모든 API 응답 형식을 통일하기 위한 공통 응답 DTO입니다.
+ */
 public record CommonResponse<T>(
         boolean success,
         T data,

@@ -1,4 +1,4 @@
-package com.moneylog.apiconnector.global.exception;
+package com.project.backend.global.exception;
 
 import org.springframework.http.HttpStatus;
 

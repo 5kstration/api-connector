@@ -1,6 +1,6 @@
-package com.moneylog.apiconnector.global.exception;
+package com.project.backend.global.exception;
 
-import com.moneylog.apiconnector.global.response.CommonResponse;
+import com.project.backend.global.response.CommonResponse;
 import jakarta.validation.ConstraintViolationException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
