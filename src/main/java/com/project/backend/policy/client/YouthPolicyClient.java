@@ -37,6 +37,9 @@ public class YouthPolicyClient {
             @Value("${external-api.youth-center.rtn-type}") String defaultRtnType,
             @Value("${external-api.youth-center.list-page-type}") String defaultListPageType
     ) {
+        if (defaultPageSize < 1 || defaultPageSize > 100) {
+            throw new IllegalStateException("external-api.youth-center.page-size는 1~100 범위여야 합니다.");
+        }
         this.restClient = restClientBuilder.baseUrl(baseUrl).build();
         this.policyPath = policyPath;
         this.apiKey = apiKey;
@@ -64,6 +67,12 @@ public class YouthPolicyClient {
     public Map<String, Object> buildParams(YouthPolicyParameter parameter) {
         int pageNum = parameter != null && parameter.pageNum() != null ? parameter.pageNum() : 1;
         int pageSize = parameter != null && parameter.pageSize() != null ? parameter.pageSize() : defaultPageSize;
+        if (pageNum < 1) {
+            throw new BusinessException(ErrorCode.INVALID_REQUEST, "pageNum은 1 이상이어야 합니다.");
+        }
+        if (pageSize < 1 || pageSize > 100) {
+            throw new BusinessException(ErrorCode.INVALID_REQUEST, "pageSize는 1~100 범위여야 합니다.");
+        }
         String pageType = parameter != null && StringUtils.hasText(parameter.pageType())
                 ? parameter.pageType()
                 : defaultListPageType;

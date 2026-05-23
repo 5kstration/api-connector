@@ -17,7 +17,10 @@ public class ExternalDataSyncScheduler {
     /*
      * application.yml의 sync.youth-policy.cron 값에 맞춰 청년정책 원본 데이터를 적재합니다.
      */
-    @Scheduled(cron = "${sync.youth-policy.cron}")
+    @Scheduled(
+            cron = "${sync.youth-policy.cron}",
+            zone = "${sync.youth-policy.zone:Asia/Seoul}"
+    )
     public void syncYouthPolicies() {
         youthPolicyRawSyncService.syncRaw(new YouthPolicyParameter(
                 1,

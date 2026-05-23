@@ -7,6 +7,8 @@ import com.project.backend.policy.client.YouthPolicyClient;
 import com.project.backend.policy.dto.YouthPolicyParameter;
 import com.project.backend.policy.dto.YouthPolicyRawSyncResultResponse;
 import com.project.backend.raw.service.RawExternalService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -18,6 +20,8 @@ import java.util.Map;
 
 @Service
 public class YouthPolicyRawSyncService {
+
+    private static final Logger log = LoggerFactory.getLogger(YouthPolicyRawSyncService.class);
 
     private static final String SOURCE_CODE = "YOUTH_CENTER";
     private static final String CATEGORY = "POLICY";
@@ -104,17 +108,19 @@ public class YouthPolicyRawSyncService {
         int failedCount = 0;
 
         for (JsonNode policyItem : policyItems) {
+            String externalId = text(policyItem, "plcyNo");
             try {
                 rawExternalService.saveIfAbsent(
                         SOURCE_CODE,
                         CATEGORY,
                         policyPath,
                         requestParams,
-                        text(policyItem, "plcyNo"),
+                        externalId,
                         policyItem
                 );
                 processedCount++;
             } catch (RuntimeException exception) {
+                log.warn("Failed to save policy item: externalId={}", externalId, exception);
                 failedCount++;
             }
         }
