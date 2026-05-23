@@ -1,6 +1,5 @@
 package com.project.backend.raw.document;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.index.CompoundIndex;
 import org.springframework.data.mongodb.core.index.Indexed;
@@ -12,8 +11,8 @@ import java.util.Map;
 /*
  * 외부 API 응답 또는 크롤링 결과를 정제하기 전 원본으로 저장하는 Document입니다.
  *
- * API마다 JSON 필드가 모두 다를 수 있으므로 rawPayload는 JsonNode로 저장합니다.
- * 예: 온통청년 정책 JSON, 시민안전보험 JSON, 카드 크롤링 결과 JSON이 모두 다른 구조여도 저장 가능
+ * rawPayload는 MongoDB에 자연스러운 JSON object 형태로 저장하기 위해 Map<String, Object>를 사용합니다.
+ * API 응답은 Client/Service에서 JsonNode로 받아도, 저장 직전 Map으로 변환합니다.
  *
  * sourceCode는 ExternalApiMetaDocument.sourceCode와 논리적인 1:N 관계를 가집니다.
  */
@@ -31,7 +30,7 @@ public class RawExternalDocument {
     private String endpoint;                    // 호출한 API path 또는 크롤링 URL
     private Map<String, Object> requestParams;  // 외부 API 호출에 사용한 요청 파라미터
     private String externalId;                  // 외부 API가 제공하는 고유 ID. 없으면 null 가능
-    private JsonNode rawPayload;                // 외부 응답 원본 JSON
+    private Map<String, Object> rawPayload;     // 외부 응답 원본 JSON
 
     @Indexed
     private String rawHash;                     // 원본 중복 저장 방지를 위한 SHA-256 해시
@@ -48,7 +47,7 @@ public class RawExternalDocument {
             String endpoint,
             Map<String, Object> requestParams,
             String externalId,
-            JsonNode rawPayload,
+            Map<String, Object> rawPayload,
             String rawHash,
             String status
     ) {
@@ -87,7 +86,7 @@ public class RawExternalDocument {
         return externalId;
     }
 
-    public JsonNode getRawPayload() {
+    public Map<String, Object> getRawPayload() {
         return rawPayload;
     }
 
