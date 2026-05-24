@@ -113,4 +113,27 @@ public class ExternalApiMetaDocument {
         this.lastSyncedAt = lastSyncedAt;
         this.updatedAt = LocalDateTime.now();
     }
+
+    /*
+     * 로컬 seed JSON의 변경 내용을 기존 source 메타데이터에 반영합니다.
+     * lastSyncedAt은 실제 동기화 결과이므로 seed 갱신으로 덮어쓰지 않습니다.
+     */
+    public void updateFromSeed(
+            String sourceName,
+            String sourceType,
+            String category,
+            String baseUrl,
+            String authType,
+            boolean enabled,
+            String syncCycle
+    ) {
+        this.sourceName = sourceName;
+        this.sourceType = sourceType;
+        this.category = category;
+        this.baseUrl = baseUrl;
+        this.authType = authType;
+        this.enabled = enabled;
+        this.syncCycle = syncCycle;
+        this.updatedAt = LocalDateTime.now();
+    }
 }
