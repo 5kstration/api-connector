@@ -1,5 +1,8 @@
 package com.project.backend.sync.controller;
 
+import com.project.backend.card.dto.CardRawSyncParameter;
+import com.project.backend.card.dto.CardRawSyncResultResponse;
+import com.project.backend.card.service.CardRawSyncService;
 import com.project.backend.global.response.CommonResponse;
 import com.project.backend.insurance.dto.InsuranceRawSyncParameter;
 import com.project.backend.insurance.dto.InsuranceRawSyncResultResponse;
@@ -19,13 +22,16 @@ public class SyncController {
 
     private final YouthPolicyRawSyncService youthPolicyRawSyncService;
     private final InsuranceRawSyncService insuranceRawSyncService;
+    private final CardRawSyncService cardRawSyncService;
 
     public SyncController(
             YouthPolicyRawSyncService youthPolicyRawSyncService,
-            InsuranceRawSyncService insuranceRawSyncService
+            InsuranceRawSyncService insuranceRawSyncService,
+            CardRawSyncService cardRawSyncService
     ) {
         this.youthPolicyRawSyncService = youthPolicyRawSyncService;
         this.insuranceRawSyncService = insuranceRawSyncService;
+        this.cardRawSyncService = cardRawSyncService;
     }
 
     /*
@@ -51,6 +57,19 @@ public class SyncController {
         return CommonResponse.success(
                 insuranceRawSyncService.syncRaw(parameter),
                 "보험 원본 데이터 적재가 완료되었습니다."
+        );
+    }
+
+    /*
+     * 카드 크롤링 데이터를 수동 적재하여 raw_externals에 저장합니다.
+     */
+    @PostMapping("/card-products")
+    public CommonResponse<CardRawSyncResultResponse> syncCardProducts(
+            @Valid @RequestBody(required = false) CardRawSyncParameter parameter
+    ) {
+        return CommonResponse.success(
+                cardRawSyncService.syncRaw(parameter),
+                "카드 원본 데이터 적재가 완료되었습니다."
         );
     }
 }
