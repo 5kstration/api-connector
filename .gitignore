@@ -48,6 +48,9 @@ src/main/resources/application-*.properties
 src/main/resources/*.local.yml
 src/main/resources/*.secret.yml
 
+### Local seed data ###
+src/main/resources/seed/*.json
+
 ### Gradle / build ###
 .gradle/
 HELP.md

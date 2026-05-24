@@ -6,6 +6,7 @@ import com.project.backend.global.exception.ErrorCode;
 import com.project.backend.insurance.client.InsuranceApiClient;
 import com.project.backend.insurance.dto.InsuranceRawSyncParameter;
 import com.project.backend.insurance.dto.InsuranceRawSyncResultResponse;
+import com.project.backend.insurance.dto.SafeInsuranceRegion;
 import com.project.backend.raw.service.RawExternalService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,19 +30,20 @@ public class InsuranceRawSyncService {
     private static final int DEFAULT_MAX_PAGE = 1;
     private static final int MAX_DERIVED_PRODUCT_NAMES = 10;
     private static final List<String> DEFAULT_YOUTH_AGES = List.of("20", "25", "30", "34");
-    private static final String DEFAULT_SAFE_UP_ORG_CD = "6110000";
-    private static final String DEFAULT_SAFE_ORG_CD = "3220000";
     private static final String DEFAULT_SAFE_MODE = "L";
 
     private final InsuranceApiClient insuranceApiClient;
     private final RawExternalService rawExternalService;
+    private final SafeInsuranceRegionProvider safeInsuranceRegionProvider;
 
     public InsuranceRawSyncService(
             InsuranceApiClient insuranceApiClient,
-            RawExternalService rawExternalService
+            RawExternalService rawExternalService,
+            SafeInsuranceRegionProvider safeInsuranceRegionProvider
     ) {
         this.insuranceApiClient = insuranceApiClient;
         this.rawExternalService = rawExternalService;
+        this.safeInsuranceRegionProvider = safeInsuranceRegionProvider;
     }
 
     /*
@@ -76,10 +78,13 @@ public class InsuranceRawSyncService {
                 ));
             }
 
-            sourceResults.add(syncBySource(
-                    InsuranceApiClient.SAFE_INSURANCE,
-                    withDefaultSafeInsuranceRegion(parameter)
-            ));
+            for (SafeInsuranceRegion region : safeInsuranceRegionProvider.findEnabledRegions()) {
+                sourceResults.add(syncBySource(
+                        InsuranceApiClient.SAFE_INSURANCE,
+                        withSafeInsuranceRegion(parameter, region)
+                ));
+                sleepBeforeNextCall();
+            }
         }
 
         int requestedCount = sourceResults.stream().mapToInt(InsuranceRawSyncResultResponse.SourceResult::requestedCount).sum();
@@ -394,7 +399,10 @@ public class InsuranceRawSyncService {
         );
     }
 
-    private InsuranceRawSyncParameter withDefaultSafeInsuranceRegion(InsuranceRawSyncParameter parameter) {
+    private InsuranceRawSyncParameter withSafeInsuranceRegion(
+            InsuranceRawSyncParameter parameter,
+            SafeInsuranceRegion region
+    ) {
         return new InsuranceRawSyncParameter(
                 InsuranceApiClient.SAFE_INSURANCE,
                 parameter == null ? null : parameter.pageNo(),
@@ -416,8 +424,8 @@ public class InsuranceRawSyncService {
                 parameter == null ? null : parameter.ofrInstNm(),
                 parameter == null ? null : parameter.gdsNm(),
                 parameter == null ? null : parameter.insuNm(),
-                textOrDefault(parameter == null ? null : parameter.upOrgCd(), DEFAULT_SAFE_UP_ORG_CD),
-                textOrDefault(parameter == null ? null : parameter.orgCd(), DEFAULT_SAFE_ORG_CD),
+                textOrDefault(parameter == null ? null : parameter.upOrgCd(), region.upOrgCd()),
+                textOrDefault(parameter == null ? null : parameter.orgCd(), region.orgCd()),
                 parameter == null ? null : parameter.mdfcnBgngYmd(),
                 parameter == null ? null : parameter.mdfcnEndYmd(),
                 textOrDefault(parameter == null ? null : parameter.mode(), DEFAULT_SAFE_MODE)

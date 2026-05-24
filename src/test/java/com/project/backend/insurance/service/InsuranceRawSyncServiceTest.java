@@ -5,12 +5,14 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.project.backend.insurance.client.InsuranceApiClient;
 import com.project.backend.insurance.dto.InsuranceRawSyncParameter;
 import com.project.backend.insurance.dto.InsuranceRawSyncResultResponse;
+import com.project.backend.insurance.dto.SafeInsuranceRegion;
 import com.project.backend.raw.service.RawExternalService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
 import java.util.Map;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -25,8 +27,9 @@ class InsuranceRawSyncServiceTest {
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final InsuranceApiClient insuranceApiClient = mock(InsuranceApiClient.class);
     private final RawExternalService rawExternalService = mock(RawExternalService.class);
+    private final SafeInsuranceRegionProvider safeInsuranceRegionProvider = mock(SafeInsuranceRegionProvider.class);
     private final InsuranceRawSyncService insuranceRawSyncService =
-            new InsuranceRawSyncService(insuranceApiClient, rawExternalService);
+            new InsuranceRawSyncService(insuranceApiClient, rawExternalService, safeInsuranceRegionProvider);
 
     @Test
     @DisplayName("시민안전보험 응답 배열을 원본 데이터로 저장한다")
@@ -114,8 +117,8 @@ class InsuranceRawSyncServiceTest {
     }
 
     @Test
-    @DisplayName("기본 보험 자동 적재는 시민안전보험을 대표 지역으로 제한해 호출한다")
-    void syncRawUsesDefaultSafeInsuranceRegionWhenSourceCodeIsEmpty() throws Exception {
+    @DisplayName("기본 보험 자동 적재는 JSON 지역 목록 기준으로 시민안전보험을 호출한다")
+    void syncRawUsesSafeInsuranceRegionsFromJsonProviderWhenSourceCodeIsEmpty() throws Exception {
         JsonNode emptyPageResponse = objectMapper.readTree("""
                 {
                   "body": {
@@ -150,20 +153,31 @@ class InsuranceRawSyncServiceTest {
                 .thenReturn(Map.of());
         when(insuranceApiClient.endpoint(any()))
                 .thenReturn("/api/test");
+        when(safeInsuranceRegionProvider.findEnabledRegions())
+                .thenReturn(List.of(
+                        new SafeInsuranceRegion("6110000", "서울특별시", "3000000", "종로구", true),
+                        new SafeInsuranceRegion("6110000", "서울특별시", "3220000", "강남구", true)
+                ));
 
         insuranceRawSyncService.syncRaw(null);
 
         ArgumentCaptor<InsuranceRawSyncParameter> parameterCaptor =
                 ArgumentCaptor.forClass(InsuranceRawSyncParameter.class);
-        verify(insuranceApiClient).fetch(
+        verify(insuranceApiClient, times(2)).fetch(
                 eq(InsuranceApiClient.SAFE_INSURANCE),
                 parameterCaptor.capture(),
                 eq(1)
         );
 
-        assertThat(parameterCaptor.getValue().upOrgCd()).isEqualTo("6110000");
-        assertThat(parameterCaptor.getValue().orgCd()).isEqualTo("3220000");
-        assertThat(parameterCaptor.getValue().mode()).isEqualTo("L");
+        assertThat(parameterCaptor.getAllValues())
+                .extracting(InsuranceRawSyncParameter::orgCd)
+                .containsExactly("3000000", "3220000");
+        assertThat(parameterCaptor.getAllValues())
+                .extracting(InsuranceRawSyncParameter::upOrgCd)
+                .containsExactly("6110000", "6110000");
+        assertThat(parameterCaptor.getAllValues())
+                .extracting(InsuranceRawSyncParameter::mode)
+                .containsExactly("L", "L");
     }
 
     @Test
@@ -195,6 +209,8 @@ class InsuranceRawSyncServiceTest {
                 .thenReturn(Map.of());
         when(insuranceApiClient.endpoint(any()))
                 .thenReturn("/api/test");
+        when(safeInsuranceRegionProvider.findEnabledRegions())
+                .thenReturn(List.of(new SafeInsuranceRegion("6110000", "서울특별시", "3220000", "강남구", true)));
 
         insuranceRawSyncService.syncRaw(null);
 
