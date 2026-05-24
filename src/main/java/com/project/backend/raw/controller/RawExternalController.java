@@ -8,6 +8,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Pattern;
 import org.springframework.data.domain.Page;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -53,7 +54,9 @@ public class RawExternalController {
     @GetMapping("/{id}")
     public CommonResponse<RawExternalResponse> findRawExternal(
             @Parameter(description = "raw_externals MongoDB ObjectId")
-            @PathVariable String id
+            @PathVariable
+            @Pattern(regexp = "^[a-fA-F0-9]{24}$", message = "유효한 MongoDB ObjectId 형식이 아닙니다.")
+            String id
     ) {
         return CommonResponse.success(rawExternalQueryService.findById(id));
     }

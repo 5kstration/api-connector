@@ -501,14 +501,14 @@ public class InsuranceRawSyncService {
         if (parameter == null || parameter.pageNo() == null) {
             return DEFAULT_START_PAGE;
         }
-        return parameter.pageNo();
+        return Math.max(DEFAULT_START_PAGE, parameter.pageNo());
     }
 
     private int maxPage(InsuranceRawSyncParameter parameter) {
         if (parameter == null || parameter.maxPage() == null) {
             return DEFAULT_MAX_PAGE;
         }
-        return parameter.maxPage();
+        return Math.max(DEFAULT_MAX_PAGE, parameter.maxPage());
     }
 
     private int intValue(JsonNode node) {

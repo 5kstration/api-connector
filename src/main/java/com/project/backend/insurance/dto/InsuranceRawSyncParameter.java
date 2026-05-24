@@ -39,4 +39,34 @@ public record InsuranceRawSyncParameter(
         String mdfcnEndYmd,
         String mode
 ) {
+
+    public static InsuranceRawSyncParameter forScheduler() {
+        return new InsuranceRawSyncParameter(
+                null,
+                1,
+                100,
+                1,
+                "json",
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                "L"
+        );
+    }
 }

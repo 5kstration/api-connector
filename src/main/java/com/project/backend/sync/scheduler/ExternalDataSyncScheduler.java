@@ -57,33 +57,7 @@ public class ExternalDataSyncScheduler {
             zone = "${sync.insurance-product.zone:Asia/Seoul}"
     )
     public void syncInsuranceProducts() {
-        insuranceRawSyncService.syncRaw(new InsuranceRawSyncParameter(
-                null,
-                1,
-                100,
-                1,
-                "json",
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                "L"
-        ));
+        insuranceRawSyncService.syncRaw(InsuranceRawSyncParameter.forScheduler());
     }
 
     /*

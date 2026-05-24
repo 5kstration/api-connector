@@ -12,6 +12,7 @@ import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 
 import java.io.IOException;
 import java.util.List;
@@ -66,11 +67,18 @@ public class ExternalApiMetaSeedLoader implements ApplicationRunner {
     }
 
     private void upsert(ExternalApiMetaSeed seed) {
+        validateSeed(seed);
         externalApiMetaRepository.findBySourceCode(seed.sourceCode())
                 .ifPresentOrElse(
                         source -> update(source, seed),
                         () -> create(seed)
                 );
+    }
+
+    private void validateSeed(ExternalApiMetaSeed seed) {
+        if (!StringUtils.hasText(seed.sourceCode())) {
+            throw new IllegalStateException("external-api-metas.json: sourceCode는 필수입니다.");
+        }
     }
 
     private void update(ExternalApiMetaDocument source, ExternalApiMetaSeed seed) {
