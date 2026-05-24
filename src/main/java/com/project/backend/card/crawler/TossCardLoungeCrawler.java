@@ -14,9 +14,13 @@ import org.springframework.util.StringUtils;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Component
 public class TossCardLoungeCrawler {
@@ -28,6 +32,15 @@ public class TossCardLoungeCrawler {
     private static final String BASE_URL = "https://card-lounge.toss.im";
     private static final int DEFAULT_LIMIT = 20;
     private static final int MAX_LIMIT = 100;
+    private static final Pattern SECTION_PATTERN = Pattern.compile("trigger-([^\\s]+)$");
+    private static final Pattern RANK_PATTERN = Pattern.compile("^(\\d+)\\s+");
+    private static final Set<String> CARD_COMPANIES = Set.of(
+            "삼성", "신한", "KB국민", "현대", "롯데", "우리", "하나", "NH농협", "IBK기업", "BC"
+    );
+    private static final Set<String> BENEFIT_SECTIONS = Set.of(
+            "여행", "생활비", "교통", "식비", "주유", "쇼핑", "통신", "구독", "문화", "의료", "교육"
+    );
+    private static final Set<String> YOUTH_AGE_GROUPS = Set.of("20대", "30대");
     private static final String USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
             + "(KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36";
 
@@ -49,8 +62,13 @@ public class TossCardLoungeCrawler {
 
             result.add(new TossCardPayload(
                     summary.cardId(),
+                    summary.cardCompany(),
+                    summary.sourceSectionType(),
+                    summary.sourceSectionName(),
+                    summary.rank(),
                     summary.cardName(),
                     summary.summary(),
+                    summary.badgeText(),
                     summary.imageUrl(),
                     summary.detailUrl(),
                     detail.annualFeeText(),
@@ -83,6 +101,7 @@ public class TossCardLoungeCrawler {
         int normalizedLimit = normalizeLimit(limit);
         Elements links = document.select("a[href^=/card/]");
         List<TossCardSummary> result = new ArrayList<>();
+        Set<String> seenCardIds = new LinkedHashSet<>();
 
         for (Element link : links) {
             if (result.size() >= normalizedLimit) {
@@ -91,6 +110,9 @@ public class TossCardLoungeCrawler {
 
             String detailPath = link.attr("href");
             String cardId = extractCardId(detailPath);
+            if (StringUtils.hasText(cardId) && !seenCardIds.add(cardId)) {
+                continue;
+            }
             String detailUrl = BASE_URL + detailPath;
             String cardName = text(link.selectFirst("[data-desktop-list-item-title]"));
             if (!StringUtils.hasText(cardName)) {
@@ -101,12 +123,25 @@ public class TossCardLoungeCrawler {
             }
 
             String imageUrl = attr(link.selectFirst("img[src]"), "abs:src");
+            String sourceSectionName = sourceSectionName(link);
+            String sourceSectionType = sourceSectionType(sourceSectionName);
+            String cardCompany = "CARD_COMPANY".equals(sourceSectionType) ? sourceSectionName : null;
+            if ("AGE_GROUP".equals(sourceSectionType) && !YOUTH_AGE_GROUPS.contains(sourceSectionName)) {
+                continue;
+            }
+            Integer rank = rank(link, cardName);
             String summary = summaryText(link, cardName);
+            String badgeText = badgeText(link);
 
             result.add(new TossCardSummary(
                     cardId,
+                    cardCompany,
+                    sourceSectionType,
+                    sourceSectionName,
+                    rank,
                     cardName,
                     summary,
+                    badgeText,
                     imageUrl,
                     detailUrl
             ));
@@ -192,7 +227,74 @@ public class TossCardLoungeCrawler {
         String fullText = normalizeText(link.text());
         String summary = fullText.replace(cardName, "").trim();
         summary = summary.replaceFirst("^\\d+\\s+", "");
+        summary = removeBadgeText(summary);
         return StringUtils.hasText(summary) ? summary : null;
+    }
+
+    private String sourceSectionName(Element link) {
+        Element current = link;
+        for (int i = 0; i < 8 && current != null; i++) {
+            if ("tabpanel".equals(current.attr("role"))) {
+                String labelledBy = current.attr("aria-labelledby");
+                Matcher matcher = SECTION_PATTERN.matcher(labelledBy);
+                if (matcher.find()) {
+                    return matcher.group(1);
+                }
+            }
+            current = current.parent();
+        }
+        return null;
+    }
+
+    private String sourceSectionType(String sourceSectionName) {
+        if (!StringUtils.hasText(sourceSectionName)) {
+            return null;
+        }
+        if (CARD_COMPANIES.contains(sourceSectionName)) {
+            return "CARD_COMPANY";
+        }
+        if ("전체".equals(sourceSectionName) || sourceSectionName.endsWith("대")) {
+            return "AGE_GROUP";
+        }
+        if (BENEFIT_SECTIONS.contains(sourceSectionName)) {
+            return "BENEFIT";
+        }
+        return "ETC";
+    }
+
+    private Integer rank(Element link, String cardName) {
+        String text = normalizeText(link.text());
+        if (!StringUtils.hasText(text)) {
+            return null;
+        }
+        text = text.replace(cardName, "").trim();
+        Matcher matcher = RANK_PATTERN.matcher(text);
+        if (!matcher.find()) {
+            return null;
+        }
+        return Integer.parseInt(matcher.group(1));
+    }
+
+    private String badgeText(Element link) {
+        List<String> badges = new ArrayList<>();
+        for (Element element : link.select("*")) {
+            String text = normalizeText(element.ownText());
+            if (StringUtils.hasText(text)
+                    && (text.contains("캐시백") || text.contains("이벤트"))
+                    && !badges.contains(text)) {
+                badges.add(text);
+            }
+        }
+        return badges.isEmpty() ? null : String.join(" / ", badges);
+    }
+
+    private String removeBadgeText(String text) {
+        if (!StringUtils.hasText(text)) {
+            return text;
+        }
+        return normalizeText(text
+                .replace("연회비캐시백", "")
+                .replaceAll("\\d+만원\\s*이벤트", ""));
     }
 
     private String extractCardId(String detailPath) {
@@ -271,8 +373,13 @@ public class TossCardLoungeCrawler {
 
     public record TossCardSummary(
             String cardId,
+            String cardCompany,
+            String sourceSectionType,
+            String sourceSectionName,
+            Integer rank,
             String cardName,
             String summary,
+            String badgeText,
             String imageUrl,
             String detailUrl
     ) {
@@ -292,8 +399,13 @@ public class TossCardLoungeCrawler {
 
     public record TossCardPayload(
             String cardId,
+            String cardCompany,
+            String sourceSectionType,
+            String sourceSectionName,
+            Integer rank,
             String cardName,
             String summary,
+            String badgeText,
             String imageUrl,
             String detailUrl,
             String annualFeeText,
@@ -309,8 +421,13 @@ public class TossCardLoungeCrawler {
         public Map<String, Object> toRawPayload() {
             Map<String, Object> payload = new LinkedHashMap<>();
             payload.put("cardId", cardId);
+            payload.put("cardCompany", cardCompany);
+            payload.put("sourceSectionType", sourceSectionType);
+            payload.put("sourceSectionName", sourceSectionName);
+            payload.put("rank", rank);
             payload.put("cardName", cardName);
             payload.put("summary", summary);
+            payload.put("badgeText", badgeText);
             payload.put("imageUrl", imageUrl);
             payload.put("detailUrl", detailUrl);
             payload.put("annualFeeText", annualFeeText);
