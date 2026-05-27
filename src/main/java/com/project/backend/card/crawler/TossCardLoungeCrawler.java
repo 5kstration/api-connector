@@ -73,8 +73,7 @@ public class TossCardLoungeCrawler {
                     summary.detailUrl(),
                     detail.annualFeeText(),
                     detail.previousMonthRequirement(),
-                    detail.benefitTexts(),
-                    detail.rawDetailText()
+                    detail.benefitTexts()
             ));
             sleepBeforeNextCall();
         }
@@ -158,8 +157,7 @@ public class TossCardLoungeCrawler {
         return new TossCardDetail(
                 annualFeeText,
                 previousMonthRequirement,
-                benefitTexts,
-                rawText
+                benefitTexts
         );
     }
 
@@ -388,12 +386,11 @@ public class TossCardLoungeCrawler {
     public record TossCardDetail(
             String annualFeeText,
             String previousMonthRequirement,
-            List<String> benefitTexts,
-            String rawDetailText
+            List<String> benefitTexts
     ) {
 
         public static TossCardDetail empty() {
-            return new TossCardDetail(null, null, List.of(), null);
+            return new TossCardDetail(null, null, List.of());
         }
     }
 
@@ -410,8 +407,7 @@ public class TossCardLoungeCrawler {
             String detailUrl,
             String annualFeeText,
             String previousMonthRequirement,
-            List<String> benefitTexts,
-            String rawDetailText
+            List<String> benefitTexts
     ) {
 
         public String externalId() {
@@ -433,7 +429,6 @@ public class TossCardLoungeCrawler {
             payload.put("annualFeeText", annualFeeText);
             payload.put("previousMonthRequirement", previousMonthRequirement);
             payload.put("benefitTexts", benefitTexts);
-            payload.put("rawDetailText", rawDetailText);
             return payload;
         }
     }

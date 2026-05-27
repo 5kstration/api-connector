@@ -132,4 +132,28 @@ class TossCardLoungeCrawlerTest {
                         "365일 24시간 10% 할인서비스 / TIME 할인(편의점, 병원/약국, 세탁소 업종)"
                 );
     }
+
+    @Test
+    @DisplayName("토스 카드 원본 payload에는 긴 상세 원문을 저장하지 않는다")
+    void rawPayloadDoesNotContainLongDetailText() {
+        TossCardLoungeCrawler.TossCardPayload payload = new TossCardLoungeCrawler.TossCardPayload(
+                "10279",
+                "삼성",
+                "AGE_GROUP",
+                "20대",
+                1,
+                "토스 삼성카드",
+                "토스/온라인 영역 15%/10% 할인",
+                null,
+                "https://static.toss.im/assets/credit-card/toss_samsung.png",
+                "https://card-lounge.toss.im/card/10279",
+                "국내전용 : 15,000원",
+                "30만원 이상",
+                java.util.List.of("토스페이/토스쇼핑 15%, 온라인 영역 10% 결제일할인")
+        );
+
+        assertThat(payload.toRawPayload())
+                .containsKeys("benefitTexts", "annualFeeText", "previousMonthRequirement")
+                .doesNotContainKeys("rawDetailText", "detailTextPreview", "detailTextTruncated");
+    }
 }
