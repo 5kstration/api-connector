@@ -1,0 +1,26 @@
+.git
+.gitignore
+.gradle
+.idea
+build
+HELP.md
+
+*.log
+logs
+
+# Local secrets and environment files
+.env
+.env.*
+!.env.example
+
+# Local Spring config and seed data must be mounted at runtime.
+src/main/resources/application.yml
+src/main/resources/application-*.yml
+src/main/resources/application.properties
+src/main/resources/application-*.properties
+src/main/resources/seed/*.json
+
+# CI/CD files are not needed in the runtime image build context.
+Jenkinsfile
+.gitlab
+.githooks

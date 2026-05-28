@@ -1,0 +1,112 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: moneylog
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: api-connector-config
+  namespace: moneylog
+data:
+  SERVER_PORT: "8081"
+  YOUTH_POLICY_SYNC_CRON: "0 0 3 * * *"
+  SYNC_YOUTH_POLICY_CRON: "0 0 3 * * *"
+  SYNC_YOUTH_POLICY_ZONE: "Asia/Seoul"
+  CARD_PRODUCT_SYNC_CRON: "0 0 4 * * *"
+  SYNC_CARD_PRODUCT_CRON: "0 0 4 * * *"
+  SYNC_CARD_PRODUCT_ZONE: "Asia/Seoul"
+  INSURANCE_PRODUCT_SYNC_CRON: "0 0 5 * * *"
+  SYNC_INSURANCE_PRODUCT_CRON: "0 0 5 * * *"
+  SYNC_INSURANCE_PRODUCT_ZONE: "Asia/Seoul"
+  SYNC_ZONE: "Asia/Seoul"
+  EXTERNAL_API_META_SEED_FILE: "classpath:seed/external-api-metas.json"
+  EXTERNAL_API_INSURANCE_SAFE_INSURANCE_REGION_FILE: "classpath:seed/safe-insurance-seoul-regions.json"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-connector
+  namespace: moneylog
+  labels:
+    app: api-connector
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: api-connector
+  template:
+    metadata:
+      labels:
+        app: api-connector
+    spec:
+      containers:
+        - name: api-connector
+          image: registry.gitlab.com/5kstration/api-connector:latest
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 8081
+          envFrom:
+            - configMapRef:
+                name: api-connector-config
+            - secretRef:
+                name: api-connector-secret
+          env:
+            - name: YOUTH_POLICY_SYNC_ZONE
+              valueFrom:
+                configMapKeyRef:
+                  name: api-connector-config
+                  key: SYNC_ZONE
+            - name: CARD_PRODUCT_SYNC_ZONE
+              valueFrom:
+                configMapKeyRef:
+                  name: api-connector-config
+                  key: SYNC_ZONE
+            - name: INSURANCE_PRODUCT_SYNC_ZONE
+              valueFrom:
+                configMapKeyRef:
+                  name: api-connector-config
+                  key: SYNC_ZONE
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 6
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: http
+            initialDelaySeconds: 45
+            periodSeconds: 30
+            timeoutSeconds: 3
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+      imagePullSecrets:
+        - name: gitlab-registry-secret
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-connector
+  namespace: moneylog
+  labels:
+    app: api-connector
+spec:
+  type: NodePort
+  selector:
+    app: api-connector
+  ports:
+    - name: http
+      port: 8081
+      targetPort: http
+      nodePort: 30081
