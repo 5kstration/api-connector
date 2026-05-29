@@ -37,13 +37,13 @@ venv/
 *.log
 config/secrets.yml
 
-### --- 문서 관련 ---
+### --- Spring config ---
+# Keep the base application.yml in Git. It must contain only safe defaults and
+# environment-variable placeholders; real values are injected by CI/K8s secrets.
 src/main/resources/application-*.yml
-src/main/resources/application.yml
 
 src/main/resources/application.properties
 src/main/resources/application-*.properties
-
 
 src/main/resources/*.local.yml
 src/main/resources/*.secret.yml

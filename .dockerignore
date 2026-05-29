@@ -13,8 +13,9 @@ logs
 .env.*
 !.env.example
 
-# Local Spring config and seed data must be mounted at runtime.
-src/main/resources/application.yml
+# Local Spring profile config and seed data must be mounted at runtime.
+# The base application.yml is safe to include because it only contains
+# environment-variable placeholders and non-secret defaults.
 src/main/resources/application-*.yml
 src/main/resources/application.properties
 src/main/resources/application-*.properties
