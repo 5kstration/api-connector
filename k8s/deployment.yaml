@@ -1,33 +1,8 @@
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: moneylog
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: api-connector-config
-  namespace: moneylog
-data:
-  SERVER_PORT: "8081"
-  YOUTH_POLICY_SYNC_CRON: "0 0 3 * * *"
-  SYNC_YOUTH_POLICY_CRON: "0 0 3 * * *"
-  SYNC_YOUTH_POLICY_ZONE: "Asia/Seoul"
-  CARD_PRODUCT_SYNC_CRON: "0 0 4 * * *"
-  SYNC_CARD_PRODUCT_CRON: "0 0 4 * * *"
-  SYNC_CARD_PRODUCT_ZONE: "Asia/Seoul"
-  INSURANCE_PRODUCT_SYNC_CRON: "0 0 5 * * *"
-  SYNC_INSURANCE_PRODUCT_CRON: "0 0 5 * * *"
-  SYNC_INSURANCE_PRODUCT_ZONE: "Asia/Seoul"
-  SYNC_ZONE: "Asia/Seoul"
-  EXTERNAL_API_META_SEED_FILE: "classpath:seed/external-api-metas.json"
-  EXTERNAL_API_INSURANCE_SAFE_INSURANCE_REGION_FILE: "classpath:seed/safe-insurance-seoul-regions.json"
----
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: api-connector
-  namespace: moneylog
+  namespace: service
   labels:
     app: api-connector
 spec:
@@ -47,27 +22,110 @@ spec:
           ports:
             - name: http
               containerPort: 8081
+          volumeMounts:
+            - name: api-connector-seed
+              mountPath: /app/config/external-api-metas.json
+              subPath: external-api-metas.json
+              readOnly: true
+            - name: api-connector-seed
+              mountPath: /app/config/safe-insurance-seoul-regions.json
+              subPath: safe-insurance-seoul-regions.json
+              readOnly: true
           envFrom:
-            - configMapRef:
-                name: api-connector-config
             - secretRef:
                 name: api-connector-secret
           env:
-            - name: YOUTH_POLICY_SYNC_ZONE
+            - name: SPRING_APPLICATION_NAME
+              value: api-connector
+            - name: SERVER_PORT
+              value: "8081"
+            - name: SPRING_DATA_MONGODB_URI
               valueFrom:
-                configMapKeyRef:
-                  name: api-connector-config
-                  key: SYNC_ZONE
-            - name: CARD_PRODUCT_SYNC_ZONE
+                secretKeyRef:
+                  name: api-connector-secret
+                  key: MONGODB_URI
+            - name: EXTERNAL_API_YOUTH_CENTER_ENABLED
+              value: "true"
+            - name: EXTERNAL_API_YOUTH_CENTER_BASE_URL
+              value: https://www.youthcenter.go.kr
+            - name: EXTERNAL_API_YOUTH_CENTER_POLICY_PATH
+              value: /go/ythip/getPlcy
+            - name: EXTERNAL_API_YOUTH_CENTER_API_KEY
               valueFrom:
-                configMapKeyRef:
-                  name: api-connector-config
-                  key: SYNC_ZONE
-            - name: INSURANCE_PRODUCT_SYNC_ZONE
+                secretKeyRef:
+                  name: api-connector-secret
+                  key: YOUTH_CENTER_API_KEY
+            - name: EXTERNAL_API_YOUTH_CENTER_PAGE_SIZE
+              value: "100"
+            - name: EXTERNAL_API_YOUTH_CENTER_RTN_TYPE
+              value: json
+            - name: EXTERNAL_API_YOUTH_CENTER_PAGE_TYPE
+              value: "1"
+            - name: EXTERNAL_API_YOUTH_CENTER_LIST_PAGE_TYPE
+              value: "1"
+            - name: EXTERNAL_API_YOUTH_CENTER_DETAIL_PAGE_TYPE
+              value: "2"
+            - name: EXTERNAL_API_CARD_CARD_GORILLA_ENABLED
+              value: "true"
+            - name: EXTERNAL_API_CARD_CARD_GORILLA_URL
+              value: https://www.card-gorilla.com/search/card?cate=CRD
+            - name: EXTERNAL_API_CARD_TOSS_CARD_LOUNGE_ENABLED
+              value: "true"
+            - name: EXTERNAL_API_CARD_TOSS_CARD_LOUNGE_URL
+              value: https://card-lounge.toss.im/
+            - name: EXTERNAL_API_INSURANCE_DATA_GO_KR_SERVICE_KEY
               valueFrom:
-                configMapKeyRef:
-                  name: api-connector-config
-                  key: SYNC_ZONE
+                secretKeyRef:
+                  name: api-connector-secret
+                  key: DATA_GO_KR_SERVICE_KEY
+            - name: EXTERNAL_API_INSURANCE_INDEMNITY_ENABLED
+              value: "true"
+            - name: EXTERNAL_API_INSURANCE_INDEMNITY_BASE_URL
+              value: http://apis.data.go.kr
+            - name: EXTERNAL_API_INSURANCE_INDEMNITY_PATH
+              value: /1160100/service/GetMedicalReimbursementInsuranceInfoService/getInsuranceInfo
+            - name: EXTERNAL_API_INSURANCE_POST_BEST_ENABLED
+              value: "true"
+            - name: EXTERNAL_API_INSURANCE_POST_BEST_BASE_URL
+              value: https://apis.data.go.kr
+            - name: EXTERNAL_API_INSURANCE_POST_BEST_PATH
+              value: /B552886/svc_postInsuBest/getPostInsuBestPrdt
+            - name: EXTERNAL_API_INSURANCE_POST_PRODUCT_ENABLED
+              value: "true"
+            - name: EXTERNAL_API_INSURANCE_POST_PRODUCT_BASE_URL
+              value: https://apis.data.go.kr
+            - name: EXTERNAL_API_INSURANCE_POST_PRODUCT_PATH
+              value: /1721301/KrpostInsuranceProductView/InsuranceGoods
+            - name: EXTERNAL_API_INSURANCE_POST_COVERAGE_ENABLED
+              value: "true"
+            - name: EXTERNAL_API_INSURANCE_POST_COVERAGE_BASE_URL
+              value: https://apis.data.go.kr
+            - name: EXTERNAL_API_INSURANCE_POST_COVERAGE_PATH
+              value: /1721301/KrpostInsuranceGuaranteeContentView/InsuranceGuranteeContent
+            - name: EXTERNAL_API_INSURANCE_SAFE_INSURANCE_ENABLED
+              value: "true"
+            - name: EXTERNAL_API_INSURANCE_SAFE_INSURANCE_BASE_URL
+              value: https://www.ins24.go.kr
+            - name: EXTERNAL_API_INSURANCE_SAFE_INSURANCE_PATH
+              value: /api/safeInsrncInfoApi
+            - name: EXTERNAL_API_META_SEED_FILE
+              value: file:/app/config/external-api-metas.json
+            - name: EXTERNAL_API_INSURANCE_SAFE_INSURANCE_REGION_FILE
+              value: file:/app/config/safe-insurance-seoul-regions.json
+            - name: SYNC_YOUTH_POLICY_CRON
+              value: "0 0 3 * * *"
+            - name: SYNC_YOUTH_POLICY_ZONE
+              value: Asia/Seoul
+            - name: SYNC_CARD_PRODUCT_CRON
+              value: "0 0 4 * * *"
+            - name: SYNC_INSURANCE_PRODUCT_CRON
+              value: "0 0 5 * * *"
+            - name: MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE
+              value: health,info,prometheus
+            - name: MANAGEMENT_ENDPOINT_HEALTH_SHOW_DETAILS
+              value: always
+            - name: LOGGING_LEVEL_COM_PROJECT_BACKEND
+              value: DEBUG
           readinessProbe:
             httpGet:
               path: /actuator/health
@@ -93,20 +151,23 @@ spec:
               memory: 512Mi
       imagePullSecrets:
         - name: gitlab-registry-secret
+      volumes:
+        - name: api-connector-seed
+          secret:
+            secretName: api-connector-seed-secret
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: api-connector
-  namespace: moneylog
+  namespace: service
   labels:
     app: api-connector
 spec:
-  type: NodePort
+  type: ClusterIP
   selector:
     app: api-connector
   ports:
     - name: http
       port: 8081
       targetPort: http
-      nodePort: 30081

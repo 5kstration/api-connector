@@ -35,7 +35,7 @@ USER appuser
 # 운영 설정과 seed JSON은 이미지에 포함하지 않고 /app/config에 마운트합니다.
 ENV SPRING_CONFIG_ADDITIONAL_LOCATION=file:/app/config/
 ENV EXTERNAL_API_META_SEED_FILE=file:/app/config/external-api-metas.json
-ENV SAFE_INSURANCE_REGION_FILE=file:/app/config/safe-insurance-seoul-regions.json
+ENV EXTERNAL_API_INSURANCE_SAFE_INSURANCE_REGION_FILE=file:/app/config/safe-insurance-seoul-regions.json
 
 # API-Connector 기본 포트는 8081입니다.
 EXPOSE 8081
