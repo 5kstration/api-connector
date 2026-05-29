@@ -19,12 +19,9 @@ pipeline {
 
         // Jenkins credentials
         REGISTRY_CRED_ID = 'gitlab-registry-credentials'
-        DEPLOY_SSH_ID    = 'onprem-api-connector-ssh-key'
-        DEPLOY_HOST_ID   = 'onprem-api-connector-host'
-
-        // On-premise deploy target
-        DEPLOY_USER      = 'deploy'
-        DEPLOY_PATH      = '/opt/moneylog/api-connector'
+        KUBECONFIG_ID    = 'k8s-kubeconfig'
+        K8S_NAMESPACE    = 'service'
+        K8S_DEPLOYMENT   = 'api-connector'
     }
 
     stages {
@@ -74,52 +71,34 @@ pipeline {
             }
         }
 
-        stage('Deploy to On-Premise Server') {
+        stage('Deploy to Kubernetes') {
             steps {
-                echo '[Deploy] Pull image and restart docker compose service on on-premise server'
-                withCredentials([
-                    usernamePassword(credentialsId: "${REGISTRY_CRED_ID}", usernameVariable: 'REGISTRY_USERNAME', passwordVariable: 'REGISTRY_PASSWORD'),
-                    string(credentialsId: "${DEPLOY_HOST_ID}", variable: 'DEPLOY_HOST')
-                ]) {
-                    sshagent(credentials: ["${DEPLOY_SSH_ID}"]) {
-                        sh '''
-                            ssh -o StrictHostKeyChecking=no "${DEPLOY_USER}@${DEPLOY_HOST}" "
-                              set -e
-                              echo '${REGISTRY_PASSWORD}' | docker login '${REGISTRY_URL}' \
-                                --username '${REGISTRY_USERNAME}' \
-                                --password-stdin
-                              cd '${DEPLOY_PATH}'
-                              export API_CONNECTOR_IMAGE='${IMAGE_LATEST}'
-                              docker compose pull api-connector
-                              docker compose up -d api-connector
-                            "
-                        '''
-                    }
+                echo '[Deploy] Apply Kubernetes manifests and roll out API-Connector'
+                withCredentials([file(credentialsId: "${KUBECONFIG_ID}", variable: 'KUBECONFIG')]) {
+                    sh '''
+                        set -e
+                        kubectl apply -f k8s/deployment.yaml
+                        kubectl apply -f k8s/istio.yaml
+                        kubectl set image deployment/${K8S_DEPLOYMENT} \
+                          ${K8S_DEPLOYMENT}=${IMAGE_FULL_NAME} \
+                          -n ${K8S_NAMESPACE}
+                        kubectl rollout status deployment/${K8S_DEPLOYMENT} \
+                          -n ${K8S_NAMESPACE} \
+                          --timeout=180s
+                    '''
                 }
             }
         }
 
         stage('Health Check') {
             steps {
-                echo '[Health] Check API-Connector actuator health'
-                withCredentials([string(credentialsId: "${DEPLOY_HOST_ID}", variable: 'DEPLOY_HOST')]) {
-                    sshagent(credentials: ["${DEPLOY_SSH_ID}"]) {
-                        sh '''
-                            ssh -o StrictHostKeyChecking=no "${DEPLOY_USER}@${DEPLOY_HOST}" "
-                              set -e
-                              for i in \$(seq 1 20); do
-                                if curl -fsS http://localhost:8081/actuator/health > /dev/null; then
-                                  echo 'API-Connector health check success'
-                                  exit 0
-                                fi
-                                sleep 3
-                              done
-                              echo 'API-Connector health check failed'
-                              docker compose -f '${DEPLOY_PATH}/docker-compose.yml' logs --tail=100 api-connector || true
-                              exit 1
-                            "
-                        '''
-                    }
+                echo '[Health] Check Kubernetes deployment and pod state'
+                withCredentials([file(credentialsId: "${KUBECONFIG_ID}", variable: 'KUBECONFIG')]) {
+                    sh '''
+                        set -e
+                        kubectl get deployment ${K8S_DEPLOYMENT} -n ${K8S_NAMESPACE}
+                        kubectl get pods -n ${K8S_NAMESPACE} -l app=${K8S_DEPLOYMENT}
+                    '''
                 }
             }
         }
@@ -134,7 +113,7 @@ pipeline {
             '''
         }
         success {
-            echo '[Success] API-Connector on-premise deployment completed'
+            echo '[Success] API-Connector Kubernetes deployment completed'
         }
         failure {
             echo '[Failure] API-Connector pipeline failed'
