@@ -38,8 +38,7 @@ venv/
 config/secrets.yml
 
 ### --- Spring config ---
-# Keep the base application.yml in Git. It must contain only safe defaults and
-# environment-variable placeholders; real values are injected by CI/K8s secrets.
+src/main/resources/application.yml
 src/main/resources/application-*.yml
 
 src/main/resources/application.properties
@@ -50,6 +49,9 @@ src/main/resources/*.secret.yml
 
 ### Local seed data ###
 src/main/resources/seed/*.json
+
+### Kubernetes generated/local config ###
+k8s/application-configmap.yaml
 
 ### Gradle / build ###
 .gradle/
