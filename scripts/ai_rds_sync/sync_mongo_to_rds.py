@@ -56,24 +56,16 @@ def load_items(collection, category: str, limit: int) -> list[dict]:
 
 
 def rds_database_url() -> str:
-    host = os.getenv("DB_HOST", "oka-ai.ctku6oc2yg75.ap-northeast-2.rds.amazonaws.com")
-    port = os.getenv("DB_PORT", "5432")
-    name = os.getenv("DB_NAME", "postgres")
-    user = os.getenv("DB_USER", "postgres")
-    password = os.getenv("DB_PASSWORD", "fisa1234!")
-
-    missing_keys = [
-        key for key, value in {
-            "DB_HOST": host,
-            "DB_PORT": port,
-            "DB_NAME": name,
-            "DB_USER": user,
-            "DB_PASSWORD": password,
-        }.items()
-        if not value
-    ]
+    required_keys = ("DB_HOST", "DB_PORT", "DB_NAME", "DB_USER", "DB_PASSWORD")
+    missing_keys = [key for key in required_keys if not os.getenv(key)]
     if missing_keys:
         raise RuntimeError(f"RDS connection environment variables are missing: {', '.join(missing_keys)}")
+
+    host = os.getenv("DB_HOST")
+    port = os.getenv("DB_PORT")
+    name = os.getenv("DB_NAME")
+    user = os.getenv("DB_USER")
+    password = os.getenv("DB_PASSWORD")
 
     encoded_user = quote_plus(user)
     encoded_password = quote_plus(password)
