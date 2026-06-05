@@ -39,6 +39,31 @@ spec:
             - secretRef:
                 name: api-connector-secret
           env:
+            - name: DB_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: api-connector-config
+                  key: DB_HOST
+            - name: DB_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: api-connector-config
+                  key: DB_PORT
+            - name: DB_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: api-connector-config
+                  key: DB_NAME
+            - name: AI_RDS_SYNC_LIMIT
+              valueFrom:
+                configMapKeyRef:
+                  name: api-connector-config
+                  key: AI_RDS_SYNC_LIMIT
+            - name: AI_RDS_SYNC_CREATE_TABLES
+              valueFrom:
+                configMapKeyRef:
+                  name: api-connector-config
+                  key: AI_RDS_SYNC_CREATE_TABLES
             - name: SPRING_DATA_MONGODB_URI
               valueFrom:
                 secretKeyRef:
