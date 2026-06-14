@@ -85,8 +85,6 @@ pipeline {
 curl -sLO https://github.com/argoproj/argo-rollouts/releases/latest/download/kubectl-argo-rollouts-linux-amd64
                         chmod +x ./kubectl-argo-rollouts-linux-amd64
                         ./kubectl-argo-rollouts-linux-amd64 -n $K8S_NAMESPACE status ${K8S_DEPLOYMENT} --timeout=360s
-                          -n ${K8S_NAMESPACE} \
-                          --timeout=360s
                     '''
                 }
             }
