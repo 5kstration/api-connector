@@ -95,7 +95,18 @@ pipeline {
                           -n ${K8S_NAMESPACE}
                         
                         # Rollout 상태 확인
-                        $ARGO_CMD -n ${K8S_NAMESPACE} status ${K8S_DEPLOYMENT} --timeout=360s
+                        if ! $ARGO_CMD -n ${K8S_NAMESPACE} status ${K8S_DEPLOYMENT} --timeout=360s; then
+                            echo "🚨 Rollout timed out! Fetching debug information..."
+                            kubectl get pods -n ${K8S_NAMESPACE} -l app=${K8S_DEPLOYMENT}
+                            
+                            echo "--- Pod Details ---"
+                            kubectl describe pods -n ${K8S_NAMESPACE} -l app=${K8S_DEPLOYMENT}
+                            
+                            echo "--- Pod Logs ---"
+                            kubectl logs -n ${K8S_NAMESPACE} -l app=${K8S_DEPLOYMENT} --all-containers --tail=50 || true
+                            
+                            exit 1
+                        fi
                     '''
                 }
             }
