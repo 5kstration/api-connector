@@ -79,12 +79,23 @@ pipeline {
                         set -e
                         kubectl apply -f k8s/deployment.yaml
                         kubectl apply -f k8s/istio.yaml
-                        kubectl set image rollout/${K8S_DEPLOYMENT} \
+                        
+                        # kubectl-argo-rollouts 설치 확인 및 다운로드
+                        if ! command -v kubectl-argo-rollouts &> /dev/null; then
+                            curl -sLO https://github.com/argoproj/argo-rollouts/releases/latest/download/kubectl-argo-rollouts-linux-amd64
+                            chmod +x ./kubectl-argo-rollouts-linux-amd64
+                            ARGO_CMD="./kubectl-argo-rollouts-linux-amd64"
+                        else
+                            ARGO_CMD="kubectl-argo-rollouts"
+                        fi
+                        
+                        # Argo Rollouts 이미지 업데이트
+                        $ARGO_CMD set image ${K8S_DEPLOYMENT} \
                           ${K8S_DEPLOYMENT}=${IMAGE_FULL_NAME} \
                           -n ${K8S_NAMESPACE}
-curl -sLO https://github.com/argoproj/argo-rollouts/releases/latest/download/kubectl-argo-rollouts-linux-amd64
-                        chmod +x ./kubectl-argo-rollouts-linux-amd64
-                        ./kubectl-argo-rollouts-linux-amd64 -n $K8S_NAMESPACE status ${K8S_DEPLOYMENT} --timeout=360s
+                        
+                        # Rollout 상태 확인
+                        $ARGO_CMD -n ${K8S_NAMESPACE} status ${K8S_DEPLOYMENT} --timeout=360s
                     '''
                 }
             }
